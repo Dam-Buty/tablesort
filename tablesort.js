@@ -48,7 +48,6 @@
         };
         el.css('user-select',attr);
       };
-
       // Add the sorting buttons to the TH elements
       function format(th) {
         var sortField   = $('<div class="table-sort-field"></div>');
@@ -66,24 +65,13 @@
         userSelect(th,'none');
         userSelect(sortField,'none');
       };
-      // Generate a new clean row based on an array
-      function newRow(arr) {
-        var row = $('<tr></tr>');
-        for (var i=0;i<arr.length;i++) {
-          var td = $('<td>'+arr[i]+'</td>').css('white-space','nowrap');
-          row.append(td);
-        };
-        return row;
-      };
-      // Create a new array of table rows from the sorted array
-      function newBody(arg) {
-        var body = $('<div></div>');
+      // Detaches the rows from the table and replaces them in the sorted order
+      function applySort(arg) {        
+        arg.tr.detach(); // detach instead of remove, so metadata is kept
         for (var i=0;i<arg.sortArr.length;i++) {
-          var tr = newRow(arg.rowArr[arg.sortArr[i]]);
-          body.append(tr);
+          var tr = arg.rowArr[arg.sortArr[i]];
+          arg.table.find('tbody').append(tr); // insert the TRs directly in the tbody, no need to use the <div> placeholder
         };
-        arg.tr.remove();
-        arg.table.find('tbody').append(body.children());
       };
       // Remove the sort order class from the non active table headings
       function removeSortOrderClass(table) {
@@ -113,9 +101,7 @@
             var text     = $(this).find('td:eq('+index+')').text()+'_'+$(this).index();
             rowArr[text] = [];
             sortArr.push(text);
-            $(this).find('td').each(function () {
-              rowArr[text].push($(this).html());
-            });
+            rowArr[text].push(this); // sends the row to rowArr instead of the html of individual cells
           });
           // Sort Array and Apply Classes
           sortArr = sortArr.sort();
@@ -128,7 +114,7 @@
           removeSortOrderClass(table);
           $(this).addClass('table-sort-order-'+sortOrder);
 
-          newBody({
+          applySort({
             table: table,
             tr: tr,
             sortArr: sortArr,
@@ -220,7 +206,6 @@
           scrolltrack.append(scrollbar);
           scroll.append(scrolltrack);
           tableSortContainer.append(scroll);
-          scroll.css('position','relative');
         }
 
         function initScroll() {
@@ -294,10 +279,8 @@
         var match = new RegExp(options.searchTerm,'ig');
         tr.each(function () {
           var el = $(this);
-          var matchText = el.text().replace(/\n\s+/g,' ');
           el.find('.table-sort-highlight').contents().unwrap().end().remove();
-          // Using match instead of test gets around a bug in Firefox
-          if (matchText.match(match) !== null) {
+          if (match.test(el.text())) {
             el.find(':not(:has(*))').each(function () {
               var target = $(this);
               replaced   = target.html().replace(match,function (m,e) {
